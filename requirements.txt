@@ -1,0 +1,18 @@
+# BLE Chat 运行依赖（Python 3.11，Windows 10/11）
+PyQt6
+qasync
+bleak>=3.0.2
+cryptography
+
+# WinRT 绑定（GATT Server 侧，bleak 自带 WinRT 后端依赖）
+# current: 3.2.1
+winrt-Windows.Foundation>=3.2.1
+winrt-Windows.Foundation.Collections>=3.2.1
+winrt-Windows.Storage.Streams>=3.2.1
+winrt-Windows.Devices.Bluetooth>=3.2.1
+winrt-Windows.Devices.Bluetooth.GenericAttributeProfile>=3.2.1
+winrt-Windows.Devices.Enumeration>=3.2.1
+
+# 开发/自测（交付仅源码，不打包 exe；跑 ruff / pytest 需要）
+pytest
+ruff

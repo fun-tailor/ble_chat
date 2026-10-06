@@ -1,0 +1,405 @@
+/* BLE Chat — Windows 风格样式表，@token@ 由 ui/theme.py 注入 */
+
+* {
+    /* 不要用 sans-serif / monospace 这类通用关键字：
+       Qt 在 Windows 上会把它们解析到位图字体（MS Sans Serif / Fixedsys），
+       DirectWrite 报 "font is bitmap" 错误并整段回退。 */
+    font-family: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "Segoe UI Symbol";
+    font-size: 13px;
+    color: @text@;
+    outline: none;
+}
+
+QWidget#MainWindow {
+    background: @bg@;
+}
+
+/* ---------------- 自绘标题栏 ---------------- */
+QWidget#TitleBar {
+    background: @titlebar@;
+    border-bottom: 1px solid @border@;
+}
+QLabel#AppTitle {
+    font-size: 12px;
+    color: @muted@;
+    background: transparent;
+}
+QPushButton#CaptionButton {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    min-width: 46px;
+    max-width: 46px;
+    min-height: 32px;
+    max-height: 32px;
+    color: @text@;
+    font-size: 14px;
+}
+QPushButton#CaptionButton:hover {
+    background: @hover@;
+}
+QPushButton#CaptionButton:pressed {
+    background: @border@;
+}
+QPushButton#CloseButton:hover {
+    background: #C42B1C;
+    color: #FFFFFF;
+}
+
+/* ---------------- 卡片 ---------------- */
+QFrame#Card {
+    background: @card@;
+    border: 1px solid @border@;
+    border-radius: 12px;
+}
+QFrame#CardTitle {
+    background: transparent;
+    border: none;
+}
+
+/* ---------------- 状态徽标 ---------------- */
+QLabel#Badge {
+    background: transparent;
+    border: none;
+    padding: 0px;
+}
+
+/* ---------------- 按钮 ---------------- */
+QPushButton, QToolButton {
+    background: @card@;
+    border: 1px solid @border@;
+    border-radius: 8px;
+    padding: 6px 14px;
+    min-height: 20px;
+}
+QPushButton:hover, QToolButton:hover {
+    background: @hover@;
+    border-color: @accent@;
+}
+QPushButton:pressed, QToolButton:pressed {
+    background: @border@;
+}
+QPushButton:disabled, QToolButton:disabled {
+    color: @muted@;
+    border-color: @border@;
+    background: @bg@;
+}
+QPushButton#PrimaryButton {
+    background: @accent@;
+    border: 1px solid @accent@;
+    color: #FFFFFF;
+    font-weight: 600;
+    min-width: 88px;
+    min-height: 20px;
+}
+QPushButton#PrimaryButton:hover {
+    background: @accent_hover@;
+}
+QPushButton#PrimaryButton:disabled {
+    background: @track@;
+    border-color: @track@;
+    color: @muted@;
+}
+QPushButton#DangerButton {
+    background: @danger@;
+    border: 1px solid @danger@;
+    color: #FFFFFF;
+}
+QPushButton#GhostButton {
+    background: transparent;
+    border: 1px solid transparent;
+    color: @accent@;
+}
+QPushButton#GhostButton:hover {
+    border-color: @border@;
+    background: @hover@;
+}
+
+/* ---------------- 输入控件 ---------------- */
+QTextEdit#InputArea, QLineEdit, QSpinBox, QComboBox {
+    background: @input@;
+    border: 1px solid @border@;
+    border-radius: 10px;
+    padding: 6px 10px;
+    selection-background-color: @accent@;
+    selection-color: #FFFFFF;
+}
+QTextEdit#InputArea:focus, QLineEdit:focus, QComboBox:focus {
+    border-color: @accent@;
+}
+QTextEdit#InputArea {
+    padding: 8px 10px;
+}
+QComboBox {
+    min-height: 24px;
+    padding-right: 22px;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    width: 20px;
+    border: none;
+}
+QComboBox QAbstractItemView {
+    background: @card@;
+    border: 1px solid @border@;
+    selection-background-color: @hover@;
+    selection-color: @text@;
+    outline: none;
+}
+
+/* ---------------- 聊天气泡 ---------------- */
+QScrollArea#ChatView {
+    background: transparent;
+    border: none;
+    outline: none;
+}
+QWidget#ChatArea {
+    background: transparent;
+}
+QLabel#BubbleHeader {
+    color: @muted@;
+    font-size: 11px;
+    background: transparent;
+    border: none;
+    padding: 0px;
+}
+QLabel#BubbleStatus {
+    color: @muted@;
+    font-size: 11px;
+    background: transparent;
+    border: none;
+    padding: 0px;
+}
+QFrame#BubbleIn, QFrame#BubbleOut {
+    border-radius: 12px;
+}
+QFrame#BubbleIn {
+    background: @bubble_in@;
+    border: 1px solid @border@;
+}
+QFrame#BubbleOut {
+    background: @bubble_out@;
+    border: 1px solid transparent;
+}
+QLabel#BubbleText, QLabel#BubbleImage {
+    background: transparent;
+    border: none;
+    color: @text@;
+    padding: 0px;
+}
+QFrame#FileCard {
+    background: @card@;
+    border: 1px solid @border@;
+    border-radius: 8px;
+}
+QLabel#FileIcon {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+}
+QLabel#FileName {
+    background: transparent;
+    border: none;
+    font-weight: 600;
+}
+
+/* ---------------- 表情面板 ---------------- */
+QFrame#EmojiPanel {
+    background: @card@;
+    border: none;
+}
+QFrame#EmojiPanel QToolButton {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 0px;
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    font-size: 16px;
+}
+QFrame#EmojiPanel QToolButton:hover {
+    background: @hover@;
+    border-color: @border@;
+}
+
+/* ---------------- 滚动条 ---------------- */
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 2px;
+}
+QScrollBar::handle:vertical {
+    background: @border@;
+    min-height: 28px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical:hover {
+    background: @muted@;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: transparent;
+}
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 2px;
+}
+QScrollBar::handle:horizontal {
+    background: @border@;
+    min-width: 28px;
+    border-radius: 4px;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+/* ---------------- 表格（历史） ---------------- */
+QTableView#HistoryTable {
+    background: @card@;
+    border: 1px solid @border@;
+    border-radius: 10px;
+    gridline-color: @border@;
+    selection-background-color: @hover@;
+    selection-color: @text@;
+}
+QTableView#HistoryTable::item {
+    padding: 6px 8px;
+    border: none;
+}
+QHeaderView::section {
+    background: @bg@;
+    border: none;
+    border-bottom: 1px solid @border@;
+    padding: 6px 8px;
+    color: @muted@;
+}
+
+/* ---------------- 对话框 ---------------- */
+QDialog {
+    background: @bg@;
+}
+QLabel#DialogTitle {
+    font-size: 16px;
+    font-weight: 600;
+}
+QLabel#Hint {
+    color: @muted@;
+}
+QFrame#Separator {
+    background: @border@;
+    max-height: 1px;
+    border: none;
+}
+
+/* ---------------- 托盘菜单 / 上下文菜单 ---------------- */
+QMenu {
+    background: @card@;
+    border: 1px solid @border@;
+    border-radius: 8px;
+    padding: 4px;
+}
+QMenu::item {
+    padding: 6px 24px 6px 12px;
+    border-radius: 6px;
+}
+QMenu::item:selected {
+    background: @hover@;
+}
+QMenu::separator {
+    height: 1px;
+    background: @border@;
+    margin: 4px 8px;
+}
+
+/* ---------------- 进度/提示 ---------------- */
+QLabel#PeerChip {
+    background: @hover@;
+    border: 1px solid @border@;
+    border-radius: 8px;
+    padding: 3px 8px;
+    color: @text@;
+}
+QLabel#ThumbsLabel {
+    background: transparent;
+    border: none;
+}
+QFrame#DropOverlay {
+    background: rgba(0, 120, 212, 30);
+    border: 2px dashed @accent@;
+    border-radius: 12px;
+}
+
+/* ---------------- 补充：对话框/提示 ---------------- */
+QLabel#MutedLabel {
+    color: @muted@;
+    background: transparent;
+    border: none;
+}
+QLabel#ErrorLabel {
+    color: @danger@;
+    background: transparent;
+    border: none;
+}
+QLabel#StatusLabel {
+    color: @muted@;
+    background: transparent;
+    border: none;
+    font-size: 12px;
+}
+QLabel#NetLabel {
+    color: @text@;
+    background: transparent;
+    border: none;
+    font-weight: 600;
+}
+QLabel#AddrLabel {
+    color: @muted@;
+    background: transparent;
+    border: none;
+    font-family: Consolas, "Courier New";
+}
+QLineEdit#PasswordEdit, QLineEdit#SearchEdit {
+    min-height: 30px;
+}
+QLineEdit#CodeEdit {
+    background: @input@;
+}
+QToolButton#PrimaryButton {
+    background: @accent@;
+    border: 1px solid @accent@;
+    color: #FFFFFF;
+    font-weight: 600;
+    min-width: 88px;
+    min-height: 20px;
+    padding: 6px 14px;
+}
+QToolButton#PrimaryButton:hover {
+    background: @accent_hover@;
+}
+QToolButton#PrimaryButton:disabled {
+    background: @track@;
+    border-color: @track@;
+    color: @muted@;
+}
+QToolButton#PrimaryButton::menu-button {
+    background: transparent;
+    border-left: 1px solid rgba(255,255,255,60);
+    width: 22px;
+}
+QFrame#PeerStrip {
+    background: transparent;
+    border: none;
+}
+QFrame#Card[dragActive="true"] {
+    border: 2px dashed @accent@;
+    background: @hover@;
+}
+QPushButton#CaptionButton[close="true"] {
+    /* 关闭按钮悬停色在 title_bar.py 中内联覆盖 */
+}

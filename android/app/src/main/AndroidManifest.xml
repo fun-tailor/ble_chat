@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Android 12+（minSdk 31）把旧的 BLUETOOTH/BLUETOOTH_ADMIN/ACCESS_FINE_LOCATION
+         换成了 BLUETOOTH_SCAN / BLUETOOTH_CONNECT 两组运行时权限。
+         neverForLocation 声明扫描结果不用于定位，从而不再需要定位权限。 -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.BleChat">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- 系统"分享"面板里的文本目标：点开直接进本应用，
+                 分享的文本预填到输入框（等连上后再发）。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

@@ -1,0 +1,46 @@
+venv/
+__pycache__/
+*.pyc
+*.log
+*.DS_Store
+.vscode/
+
+# 测试
+tests/
+test_dir/
+.ruff_cache/
+.pytest_cache/
+
+# 配置文件
+config.json
+LLM.md
+log/
+keys/
+history.db
+history.db-shm
+history.db-wal
+history_files/
+networks.json
+
+# 暂保留
+SPEC.md
+TESTING.md
+
+# vs code
+*.code-workspace
+tempCodeRunnerFile.py
+
+PROJECT_STRUCTURE.md
+
+# 打包文件(current)
+/*.spec
+/*.exe
+/build
+/dist
+
+# rust
+/target
+
+#临时
+/assets
+
