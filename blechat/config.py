@@ -113,7 +113,7 @@ class Config:
             mode=mode if mode in ("host", "join") else "host",
             system_pairing=bool(raw.get("system_pairing", False)),
             persist_credentials=bool(raw.get("persist_credentials", True)),
-            enable_emoji=bool(raw.get("enable_emoji", False)),
+            enable_emoji=bool(raw.get("enable_emoji", True)),
             receive_dir=str(raw.get("receive_dir", "")),
             auto_save_files=bool(raw.get("auto_save_files", False)),
             log_level=str(raw.get("log_level", "INFO")),
