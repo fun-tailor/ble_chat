@@ -27,7 +27,30 @@ MAX_VIEW = 100
 MAX_BUBBLE_RATIO = 0.7
 MIN_BUBBLE_PX = 200
 
+# 双击气泡"打开文件"的白名单：**只放办公文档和纯文本**。
+#
+# 为什么必须限制：双击 = 交给 ShellExecute，等于让系统按扩展名去找关联程序执行。
+# 一个 `.py` / `.bat` / `.cmd` / `.exe` / `.ps1` / `.js` / `.lnk` 被点开就是
+# **在本机执行代码** —— 而收到的文件是对端发来的、不可信。所以：
+#   * 白名单之外**静默**（不提示、不复制路径、什么都不做），想要原文件走
+#     右键「打开文件所在目录」（那条路只开资源管理器，不存在执行）；
+#   * 白名单里只留"用文档方式打开"的类型，`.html/.svg` 这类能带脚本的也不放。
+OPENABLE_SUFFIXES = frozenset({
+    # 纯文本
+    ".txt", ".md", ".log", ".csv", ".tsv", ".json", ".xml", ".yaml", ".yml",
+    ".ini", ".cfg", ".rtf",
+    # Office / 办公文档
+    ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf",
+    ".odt", ".ods", ".odp",
+})
+
 _view_log = logging.getLogger("blechat.ui.chat")
+
+
+def is_openable(name: str) -> bool:
+    """按扩展名判断能不能"以文档方式打开"（见 `OPENABLE_SUFFIXES` 的说明）。"""
+    suffix = Path(name or "").suffix.lower()
+    return suffix in OPENABLE_SUFFIXES
 
 
 class ChatModel(QObject):
@@ -386,11 +409,23 @@ class ChatView(QScrollArea):
                 self.copied.emit("图片已复制")
 
     def open_file(self, item: MessageItem) -> None:
+        """双击文件气泡：**只**打开白名单里的办公文档/纯文本，其余静默。
+
+        以前是"什么都能开"：`.py` 这种代码文件双击就会交给系统按关联程序执行
+        （等于在本机跑对端发来的代码）。现在扩展名不在
+        [OPENABLE_SUFFIXES] 里就直接返回 —— 不提示、不复制、不弹窗。
+        """
+        name = item.file_name or item.local_path
+        if not is_openable(name):
+            _view_log.debug("refuse to open non-document file: %s", name)
+            return
         if item.local_path:
             QDesktopServices.openUrl(QUrl_from_local(item.local_path))
             self.copied.emit(f"已打开 {item.local_path}")
             return
-        self.copy_item(item)
+        # 没落盘的文件（比如正在发送中/已被清理）：退化成复制文件名，绝不执行
+        QApplication.clipboard().setText(name)
+        self.copied.emit("文件还没落盘，文件名已复制")
 
     def reveal_file(self, item: MessageItem) -> None:
         """打开文件所在目录，并**尽量在资源管理器里选中它**。

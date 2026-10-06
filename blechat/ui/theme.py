@@ -25,6 +25,17 @@ LIGHT: dict[str, str] = {
     "titlebar": "#FAFAFA",
     "shadow": "rgba(0,0,0,24)",
     "track": "#E0E0E0",
+    # ---- 淡色主按钮（发送 / 对话框"确定"）--------------------------------
+    # 以前主按钮是实心 `#0078D4` + 白字，在整个浅色界面里太"重"、也太扎眼。
+    # 现在改成**淡蓝底 + 深蓝字**：仍然是唯一的强调色，但不再抢视线。
+    # `select` 是文字/表格选中态的高亮（用户指定的那版淡蓝），和按钮同色系，
+    # 保证"选中"和"主动作"看起来是一家人。
+    "accent_soft": "#C8DCFF",
+    "accent_soft_hover": "#B4CFFB",
+    "accent_soft_border": "#A3C2EE",
+    "on_accent_soft": "#0F4A85",
+    "select": "#C8DCFF",
+    "select_text": "#000000",
 }
 
 DARK: dict[str, str] = {
@@ -45,6 +56,13 @@ DARK: dict[str, str] = {
     "titlebar": "#262626",
     "shadow": "rgba(0,0,0,48)",
     "track": "#3D3D3D",
+    # 深色主题下"淡"是相对底色而言：比卡片亮一点点的蓝，字用浅蓝。
+    "accent_soft": "#1E3C58",
+    "accent_soft_hover": "#27496B",
+    "accent_soft_border": "#33587C",
+    "on_accent_soft": "#C7E3FF",
+    "select": "#2F5D86",
+    "select_text": "#FFFFFF",
 }
 
 
@@ -76,8 +94,11 @@ def build_palette(colors: dict[str, str]) -> QPalette:
     p.setColor(QPalette.ColorRole.Button, bg)
     p.setColor(QPalette.ColorRole.ButtonText, text)
     p.setColor(QPalette.ColorRole.BrightText, QColor(colors["danger"]))
-    p.setColor(QPalette.ColorRole.Highlight, accent)
-    p.setColor(QPalette.ColorRole.HighlightedText, QColor("#FFFFFF"))
+    # 选中态用淡蓝高亮 + 黑字（默认的实心 accent 蓝会把选中文字压得很难读）。
+    # 放进 palette 是为了让**没被 QSS 覆盖到**的地方（下拉弹层、输入法的候选、
+    # 表格单元格……）也统一到这个颜色。
+    p.setColor(QPalette.ColorRole.Highlight, QColor(colors["select"]))
+    p.setColor(QPalette.ColorRole.HighlightedText, QColor(colors["select_text"]))
     p.setColor(QPalette.ColorRole.ToolTipBase, QColor(colors["card"]))
     p.setColor(QPalette.ColorRole.ToolTipText, text)
     p.setColor(QPalette.ColorRole.PlaceholderText, QColor(colors["muted"]))

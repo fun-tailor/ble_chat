@@ -448,7 +448,6 @@ class GattServer:
                 # deferral（WinRT 的 DataReader 语义），系统随即自动应答一次；
                 # 之后我们再去 `respond()` 自然就撞 "already committed"。
                 # 那不是错误，只是我们在多此一举 —— 记录状态、别再无脑重试。
-                responded = False
                 try:
                     request = await request_op
                     if request is None:
@@ -456,7 +455,6 @@ class GattServer:
                         return
                     try:
                         request.respond()  # 先应答，避免解析失败时客户端一直等
-                        responded = True
                     except Exception as exc:
                         log.debug(
                             "respond skipped (%s, 系统应已自动应答): %s", channel, exc

@@ -2,16 +2,20 @@ from __future__ import annotations
 
 import os
 
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QKeyEvent, QMouseEvent
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QKeyEvent, QMouseEvent, QTextCursor
 from PyQt6.QtWidgets import (QFileDialog, QFrame, QHBoxLayout, QLabel, QMenu, QTextEdit,
                              QToolButton, QVBoxLayout, QWidgetAction)
 
 from ...protocol import MAX_FILE, MAX_PAYLOAD
 from ..emoji_panel import EmojiPanel
 from .circular_progress import CircularProgress
+from .send_button import SendButton
 
 IMAGE_SUFFIX = (".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp")
+
+# 发送按钮上纸飞机的逻辑尺寸（图标按 DPR 渲染，见 ui/icons.py）
+SEND_ICON_PX = 18
 
 
 def _oversize_limit(path: str) -> int | None:
@@ -96,19 +100,41 @@ class DropArea(QFrame):
         self.progress = CircularProgress(self, 24)
         row.addWidget(self.progress, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.send_button = QToolButton(self)
-        self.send_button.setText("发送")
-        self.send_button.setObjectName("PrimaryButton")
-        self.send_button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        self.send_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.send_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.send_button = SendButton(self)
+        self.send_button.setToolTip("发送（Ctrl+Enter）；点右侧箭头选发给谁")
         self.send_button.clicked.connect(self.sendRequested)
         self.send_button.setEnabled(False)
         self._menu = QMenu(self)
         self.send_button.setMenu(self._menu)
+        self._icon_color = ""
+        self._icon_dpr = 0.0
         row.addWidget(self.send_button)
 
         layout.addLayout(row)
+
+    # ------------------------------------------------------------- theme
+    def set_colors(self, colors: dict[str, str]) -> None:
+        """主题变化时重渲染发送按钮的纸飞机 + 下拉箭头（都是画出来的，得跟着换色）。"""
+        self._apply_send_icon(colors.get("on_accent_soft", ""))
+
+    def _apply_send_icon(self, color: str) -> None:
+        from ..icons import svg_pixmap
+
+        dpr = self.devicePixelRatioF()
+        self._icon_color = color
+        self._icon_dpr = dpr
+        pixmap = svg_pixmap("send", color, SEND_ICON_PX, dpr)
+        # 传空 pixmap 时按钮自己退回纯文字 —— `assets/send.svg` 缺失
+        # （注意 `.gitignore` 里 `/assets` 是被忽略的）或 QtSvg 缺失都能兜住，
+        # 绝不会变成一块空白。
+        self.send_button.set_icon_pixmap(pixmap)
+        self.send_button.set_arrow_color(color)
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        super().showEvent(event)
+        # 拖到另一块缩放不同的屏幕上时重渲染一次，否则图标会糊
+        if abs(self.devicePixelRatioF() - self._icon_dpr) > 0.01:
+            self._apply_send_icon(self._icon_color)
 
     def set_emoji_enabled(self, enabled: bool) -> None:
         """表情按钮开关（默认关闭，设置里可开）。"""
@@ -171,6 +197,18 @@ class DropArea(QFrame):
         return self.text_area.toPlainText().strip("\n")
 
     def clear(self) -> None:
+        """清空输入框。
+
+        先收掉选区再清：**输入框里有选中的文字**时直接 `clear()`，Qt 内部那次
+        `QTextCursor::setPosition` 会短暂越界，偶尔打出一行
+        `QTextCursor::setPosition: Position 'N' out of range` 并卡一下
+        （dev 报的"输入框有文字且被选中时偶发卡顿"）。先把光标挪到末尾是零成本的。
+        """
+        cursor = self.text_area.textCursor()
+        if cursor.hasSelection():
+            cursor.clearSelection()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            self.text_area.setTextCursor(cursor)
         self.text_area.clear()
 
     def _on_emoji(self, emoji: str) -> None:

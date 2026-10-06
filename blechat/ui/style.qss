@@ -84,21 +84,47 @@ QPushButton:disabled, QToolButton:disabled {
     border-color: @border@;
     background: @bg@;
 }
-QPushButton#PrimaryButton {
-    background: @accent@;
-    border: 1px solid @accent@;
-    color: #FFFFFF;
+/* 主按钮：**淡蓝底 + 深蓝字**（以前的实心 #0078D4 太扎眼）。
+   发送按钮（SendButton）共用同一套配色，只是一个药丸形、一个圆角矩形。 */
+QPushButton#PrimaryButton, QToolButton#PrimaryButton, QToolButton#SendButton {
+    background: @accent_soft@;
+    border: 1px solid @accent_soft_border@;
+    color: @on_accent_soft@;
     font-weight: 600;
     min-width: 88px;
     min-height: 20px;
 }
-QPushButton#PrimaryButton:hover {
-    background: @accent_hover@;
+QPushButton#PrimaryButton:hover, QToolButton#PrimaryButton:hover, QToolButton#SendButton:hover {
+    background: @accent_soft_hover@;
+    border-color: @accent_soft_border@;
 }
-QPushButton#PrimaryButton:disabled {
+QPushButton#PrimaryButton:pressed, QToolButton#PrimaryButton:pressed, QToolButton#SendButton:pressed {
+    background: @accent_soft_border@;
+}
+QPushButton#PrimaryButton:disabled, QToolButton#PrimaryButton:disabled, QToolButton#SendButton:disabled {
     background: @track@;
     border-color: @track@;
     color: @muted@;
+}
+/* 发送按钮：药丸 + 纸飞机（图标的颜色由 ui/icons.svg_icon 按主题渲染） */
+QToolButton#SendButton {
+    border-radius: 17px;
+    min-width: 58px;
+    min-height: 34px;
+    max-height: 34px;
+    padding: 0 2px;
+}
+QToolButton#SendButton::menu-button {
+    background: transparent;
+    border-left: 1px solid @accent_soft_border@;
+    border-top-right-radius: 17px;
+    border-bottom-right-radius: 17px;
+    width: 20px;
+}
+/* 默认的下拉箭头是个实心三角，在淡色药丸上比纸飞机还抢眼；关掉它，
+   由 SendButton.paintEvent 自己画一条同色折线（宽度见 widgets/send_button.py）。 */
+QToolButton#SendButton::menu-arrow {
+    image: none;
 }
 QPushButton#DangerButton {
     background: @danger@;
@@ -121,8 +147,9 @@ QTextEdit#InputArea, QLineEdit, QSpinBox, QComboBox {
     border: 1px solid @border@;
     border-radius: 10px;
     padding: 6px 10px;
-    selection-background-color: @accent@;
-    selection-color: #FFFFFF;
+    /* 选中文字用淡蓝高亮 + 黑字（palette 里也设了一份，覆盖 QSS 管不到的地方） */
+    selection-background-color: @select@;
+    selection-color: @select_text@;
 }
 QTextEdit#InputArea:focus, QLineEdit:focus, QComboBox:focus {
     border-color: @accent@;
@@ -143,8 +170,8 @@ QComboBox::drop-down {
 QComboBox QAbstractItemView {
     background: @card@;
     border: 1px solid @border@;
-    selection-background-color: @hover@;
-    selection-color: @text@;
+    selection-background-color: @select@;
+    selection-color: @select_text@;
     outline: none;
 }
 
@@ -265,8 +292,8 @@ QTableView#HistoryTable {
     border: 1px solid @border@;
     border-radius: 10px;
     gridline-color: @border@;
-    selection-background-color: @hover@;
-    selection-color: @text@;
+    selection-background-color: @select@;
+    selection-color: @select_text@;
 }
 QTableView#HistoryTable::item {
     padding: 6px 8px;
@@ -309,7 +336,8 @@ QMenu::item {
     border-radius: 6px;
 }
 QMenu::item:selected {
-    background: @hover@;
+    background: @select@;
+    color: @select_text@;
 }
 QMenu::separator {
     height: 1px;
@@ -370,28 +398,8 @@ QLineEdit#PasswordEdit, QLineEdit#SearchEdit {
 QLineEdit#CodeEdit {
     background: @input@;
 }
-QToolButton#PrimaryButton {
-    background: @accent@;
-    border: 1px solid @accent@;
-    color: #FFFFFF;
-    font-weight: 600;
-    min-width: 88px;
-    min-height: 20px;
-    padding: 6px 14px;
-}
-QToolButton#PrimaryButton:hover {
-    background: @accent_hover@;
-}
-QToolButton#PrimaryButton:disabled {
-    background: @track@;
-    border-color: @track@;
-    color: @muted@;
-}
-QToolButton#PrimaryButton::menu-button {
-    background: transparent;
-    border-left: 1px solid rgba(255,255,255,60);
-    width: 22px;
-}
+/* 发送按钮的配色在上面 `#PrimaryButton` 那一组里统一给了，这里只补一个
+   淡底按钮的菜单分隔线（原来是给实心按钮配的白色分隔线，在淡底上看不见）。 */
 QFrame#PeerStrip {
     background: transparent;
     border: none;

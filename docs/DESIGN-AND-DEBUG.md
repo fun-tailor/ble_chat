@@ -468,6 +468,126 @@ gatt table incomplete (attempt 1/4, streak=1, elapsed=1.82s, table=<empty>): …
 
 ---
 
+## 2.8 本轮（第十轮）· 窗口（改尺寸 / 最大化）+ 淡色主题 + 文件打开白名单
+
+> dev 反馈：① 鼠标移到窗口边界**不能拖动改大小**（只能去改 `config.json`）；
+> ② 点最大化：第一次窗口变大了但图标还是 `▢`，再点一次才变 `❐` 而且"内层又向外扩
+> 一点点"，第三次点才还原；③ 双击文件气泡会执行任意类型（`.py` 这种太危险）；
+> ④ 发送按钮颜色太深（含历史对话框的「关闭」），想把"发送"二字换成
+> `assets/send.svg` 的纸飞机；⑤ 输入框有选中文字时偶发一次卡顿并打
+> `QTextCursor::setPosition: Position 'N' out of range`。
+> 另：`重置蓝牙` 按钮已注释、不再迭代（睡眠唤醒那条路本轮不动）。
+
+### 问题 ① · 无边框窗口的"边界拖动"为什么整体失效
+
+窗口是 `FramelessWindowHint` + `WA_TranslucentBackground`（自绘圆角）。
+`tools/ui_smoke.py` 直接把两件事实测出来了：
+
+```
+[frameless+translucent] STYLE   0x860B0000  ['WS_POPUP', 'WS_SYSMENU', 'WS_MINIMIZEBOX', 'WS_MAXIMIZEBOX']
+                        EXSTYLE 0x00080000  ['WS_EX_LAYERED']
+[normal frame]          STYLE   0x86CF0000  [... 'WS_CAPTION', 'WS_THICKFRAME' ...]
+```
+
+1. **没有 `WS_THICKFRAME`** ⇒ "这个窗口可以调整大小"在系统层面不成立。
+   即使自己算几何拖动，`DefWindowProc` 收到 `SC_SIZE` 也不会进入调整循环。
+2. **`WS_EX_LAYERED`（分层窗口）的鼠标命中是按 alpha 来的**：全透明像素
+   **点击穿透**。而自绘边框外面正好是 4px 全透明，`RESIZE_MARGIN` 原来只有 6 ⇒
+   真正能收到 Qt 鼠标事件的那一圈只剩 2px，实际体验就是"鼠标贴到边界也没反应"。
+
+**修复**（Chrome / VS Code 那套无边框窗口的标准做法，三步）：
+
+| 步骤 | 做法 | 为什么 |
+|---|---|---|
+| 1 | `SetWindowLongPtr(GWL_STYLE, … \| WS_THICKFRAME)` | 让窗口"可调整大小"，系统才会进调整循环 |
+| 2 | 接管 `WM_NCCALCSIZE`，**什么都不改、返回 0** | 抵消 THICKFRAME 带来的非客户区边框（客户区 = 整窗），否则界面凭空内缩一圈 |
+| 3 | 接管 `WM_NCHITTEST`，边缘回 `HTLEFT/HTTOP/…` | 光标形状 + 拖动都由系统接管；**也顺手绕开了 alpha 穿透**（我们自己答复，不走 DefWindowProc 那套） |
+
+外加两条退路：`mousePressEvent` 里先试 `QWindow.startSystemResize(edges)`
+（Qt 官方 API），失败才用原来"自己算几何"的拖动。
+
+> **踩到的两个硬坑**（都写进代码注释了）：
+> * PyQt6 6.9 上 **不能调 `super().nativeEvent(eventType, message)`** ——
+>   把那个 `message` 原样传回 C++，进程立刻以 `0xC000041D` 退出，
+>   **连 traceback 都看不到**。`QWidget.nativeEvent` 默认就是"什么都不处理"，
+>   返回 `(False, 0)` 完全等价。
+> * `nativeEvent` 的 `eventType` 是 **`QByteArray`**，既不等于 `b"windows_generic_MSG"`
+>   也不等于同名的 `str` —— 直接比较**永远为假**，表现是"拦截代码写了却毫无作用"。
+> * `WM_NCCALCSIZE` 里**不要**把 `rgrc[0]` 覆盖成 `GetWindowRect()`：那一刻窗口矩形
+>   还是**旧值**，Qt 发完 `SetWindowPos` 读回来发现对不上，就会打
+>   `QWindowsWindow::setGeometry: Unable to set geometry …`（最大化时必现）。
+
+### 问题 ② · 最大化"一次点击被拆成两次状态变化"
+
+**根因**：`showMaximized()` 之后，"窗口真的变大"和"`isMaximized()` 变成 True"
+**不同步**。`changeEvent` 里读到的还是 `False` ⇒ 图标和边距没跟上；
+第二次点击才补上（顺带又改了一次几何，就是 dev 看到的"内层又向外扩一点点"）。
+另外原来的边距写法是 `self.setContentsMargins(...)`，而布局在 `__init__` 里
+**显式设过自己的边距**，这一句对布局根本不起作用（边距该变的时候没变对）。
+
+**修复**：最大化**自己管**，不交给 Windows：
+
+* `set_maximized(bool)` 一次把 **几何 + 图标 + 边距 + 重绘** 改完，而且**幂等**；
+* 还原用的是自己记住的 `_normal_geometry`（从最大化往外拖时按"抓取点占标题栏
+  宽度的比例"换算，光标底下的内容不跳）；
+* 最大化时背景改成铺满直角（不再留 8px 白边 + 圆角 —— 屏幕边上看得到桌面很难看）；
+* `normal_geometry()` 给 `app._save_geometry()` 用：**最大化状态下退出程序，
+  存进 config 的必须是还原后的尺寸**，否则下次启动是个贴屏巨窗；
+* `changeEvent` 只在**外部**（系统菜单 / Win+↑）改了状态时对齐一次。
+
+### 问题 ③ · 双击文件气泡会执行任意类型
+
+`QDesktopServices.openUrl` = ShellExecute = 让系统按扩展名找关联程序**执行**。
+收到的文件是对端发来的、不可信，所以现在**白名单**（`chat_view.OPENABLE_SUFFIXES`）：
+纯文本（`txt/md/log/csv/tsv/json/xml/yaml/yml/ini/cfg/rtf`）+ 办公文档
+（`doc(x)/xls(x)/ppt(x)/pdf/odt/ods/odp`）。
+
+白名单之外**静默**（不提示、不复制、什么都不做）；要原文件走右键
+「打开文件所在目录」—— 那条路只开资源管理器，不存在执行。
+`.html` / `.svg` 也不放（它们能带脚本）。
+
+### 问题 ④ · 淡色主题 + 纸飞机发送按钮
+
+| 位置 | 以前 | 现在 |
+|---|---|---|
+| 主按钮（发送 / 对话框「确定」/ 历史「关闭」） | 实心 `#0078D4` + 白字 | **淡蓝底 `#C8DCFF` + 深蓝字 `#0F4A85`**（深色主题 `#1E3C58` / `#C7E3FF`） |
+| 文字 / 表格 / 菜单的选中高亮 | 实心 accent 蓝 + 白字 | 同上那支淡蓝（进 `palette` 覆盖 QSS 管不到的地方） |
+| 发送按钮 | 文字"发送" | `assets/send.svg` 纸飞机（**按主题换色渲染**，`ui/icons.py`）+ 药丸形 |
+
+顺手清掉两个坑：默认的 `::menu-arrow` 是个**实心三角**，在淡色药丸上比纸飞机还抢眼，
+而且 QSS 管不住它的尺寸 ⇒ 关掉（`image: none`），由 `SendButton.paintEvent`
+自己画一条同色"∨"；分隔线原来是给实心按钮配的白色，现在跟边框同色。
+
+**纸飞机的居中位置**（dev 追加的一条）：Qt 会把图标在**整个按钮**里居中，而按钮右边
+还有一格"选发给谁" ⇒ 视觉重心被箭头拽偏（"看着偏向箭头"）。所以图标也改成自己画：
+`SendButton.icon_cell()` = 整条药丸**减去**右侧下拉格，纸飞机在这块里居中，
+箭头在那格里居中。下拉格的矩形是**问样式要的**（`subControlRect(SC_ToolButtonMenu)`），
+QSS 改了宽度这里不会跟着错。禁用时图标和箭头一起降到 40% 透明度。
+
+### 问题 ⑤ · 输入框有选中文字时清空
+
+`drop.clear()` 之前先**收掉选区并把光标移到末尾**再清。Qt 内部那次
+`QTextCursor::setPosition` 会短暂越界，偶发
+`QTextCursor::setPosition: Position 'N' out of range` 并卡一下（dev 报的正是
+"输入框有文字**且被选中**"这一种）。这是零成本的收口，但**没有确证**这条警告
+一定来自这里（只是最像）。
+
+### 本轮怎么验的
+
+```bash
+python -m pytest -q                 # 263 项（本轮新增 tests/test_round10.py 49 项）
+python -m ruff check .              # 全绿
+python tools/ui_smoke.py            # 真窗口冒烟：32 项（WS_THICKFRAME / 客户区==整窗 /
+                                    #   四边四角命中测试 / 最大化一次到位且幂等 /
+                                    #   图标渲染 + 居中不偏箭头 / 白名单）
+```
+
+`tools/ui_smoke.py` 会**短暂显示一次窗口**（1~2 秒后自动关），因为这一类问题
+（窗口样式、分层窗口命中、最大化时序）**只有真窗口能验** —— 单测跑在
+`QT_QPA_PLATFORM=offscreen` 下，连真实句柄都没有。
+
+---
+
 ## 3. 用户体验故事（可当验收剧本）
 
 ### 故事 A · 晚岚把 server 关掉去吃饭，回来重新打开
@@ -546,6 +666,32 @@ gatt table incomplete (attempt 1/4, streak=1, elapsed=1.82s, table=<empty>): …
 >    点下去会打开系统蓝牙设置页，把蓝牙关掉再打开即可。
 >
 > **她能自己判断"好没好"**：状态徽章回到 `READY`、提示栏不再有红色文字。
+
+### 故事 F · 晚岚想把窗口拖大一点，或者直接最大化（第十轮加的）
+
+> **期望（也是现在的行为）**：
+> 1. 鼠标移到窗口任意一条边/角 ⇒ 光标变成 ↔／↕／⤡，**按住就能拖**（四边四角都行，
+>    最大化和最小化之间也不会出现"要点两次"）；
+> 2. 点标题栏 `▢` ⇒ **一次**变成铺满工作区的 `❐`（图标、留白、尺寸同时到位）；
+>    再点一次 ⇒ 回到原来的大小和位置；
+> 3. 最大化状态下从标题栏往下拖 ⇒ 立刻还原成普通窗口，并**接着**鼠标继续拖
+>    （光标下的内容不跳）；
+> 4. 最大化时退出程序，下次启动仍然是**还原后的尺寸**（不是贴屏巨窗）。
+>
+> **以前**：`▢` 第一次点击只是窗口变大（图标还是 `▢`），第二次才变 `❐` 并再扩一点，
+> 第三次才还原；窗口边界根本拖不动（只能去改 `config.json`）。
+
+### 故事 G · 晚岚收到一个 `.py`，她双击了它（第十轮加的）
+
+> **期望（也是现在的行为）**：**什么都不发生**。不打开、不提示、不动剪贴板。
+> 想拿这个文件就右键「打开文件所在目录」，自己在编辑器里打开。
+>
+> 理由：双击 = 交给系统按扩展名执行；`.py`/`.bat`/`.lnk` 这类点开就是
+> **在本机跑对端发来的代码**。只有办公文档和纯文本（`txt/docx/xlsx/pdf/…`）
+> 允许双击打开；`.html`/`.svg` 这种能带脚本的也不放。
+>
+> 同理，**发送按钮**现在是淡蓝色药丸 + 纸飞机图标：不再抢视线，但仍然一眼看得出
+> 是"发送"（鼠标悬停有 tooltip，右侧小箭头可以选发给谁）。
 
 ---
 
@@ -645,6 +791,11 @@ cfg.app_root = app_mod.app_root = hist.app_root = lambda: ROOT   # 临时目录
 | 想改什么 | 去哪里 |
 |---|---|
 | UI 布局/控件 | `blechat/ui/`（`main_window.py` 是骨架，`widgets/` 是零件） |
+| **窗口行为**（改尺寸 / 最大化 / 拖动 / 自绘边框） | `blechat/ui/main_window.py`（Win32 常量与注释在文件头）+ `widgets/title_bar.py` |
+| **配色** | `blechat/ui/theme.py`（`LIGHT`/`DARK` 两个字典就是全部 token；QSS 里写 `@token@`）+ `style.qss` |
+| **图标**（SVG 按主题换色渲染） | `blechat/ui/icons.py`（`svg_icon`）；素材在仓库根 `assets/` |
+| 发送按钮（药丸 + 纸飞机 + 下拉箭头） | `blechat/ui/widgets/send_button.py` |
+| **哪些文件允许双击打开** | `blechat/ui/widgets/chat_view.py` 的 `OPENABLE_SUFFIXES` / `is_openable` |
 | **UI 显示什么状态** | `blechat/app_state.py` 的 `derive_ui_state()`（纯函数，先改这里再改 UI） |
 | 应用编排（谁在什么时候启动/重连） | `blechat/app.py`（`_start_mode` / `_client_loop` / `_watchdog_tick` / `_client_hung`） |
 | 握手 / 分片 / ACK / 保活 | `blechat/session.py`（Host 与 Client **共用**） |
@@ -675,3 +826,9 @@ cfg.app_root = app_mod.app_root = hist.app_root = lambda: ROOT   # 临时目录
    按**单次尝试**计时并留够宽限（`_connect_started_at` + `CONNECT_GRACE_SECONDS`），
    否则会把正在进行的 `connect()` 反复取消 —— 越掐越连不上。
    同理：**日志 handler 不能同步写盘**（见 §2.5 问题 C）。
+5. **无边框窗口的三件套别拆开用**（见 §2.8 问题 ①）：`WS_THICKFRAME` +
+   `WM_NCCALCSIZE`（返回 0、别改 `rgrc[0]`）+ `WM_NCHITTEST`。
+   只加 `WS_THICKFRAME` 界面会内缩一圈；只改命中测试则拖不动（系统不认为可调整大小）。
+   另外两条 PyQt6 的坑：**`nativeEvent` 里绝不能调 `super()`**（进程
+   `0xC000041D` 静默退出），**`eventType` 是 `QByteArray`**（和 `bytes`/`str`
+   比较恒为假）。这类东西只有真窗口能验 ⇒ 改动后跑 `python tools/ui_smoke.py`。

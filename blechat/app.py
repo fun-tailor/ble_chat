@@ -689,7 +689,9 @@ class BleChatApp(QObject):
             self.window.move(geom.x, geom.y)
 
     def _save_geometry(self) -> None:
-        geo = self.window.geometry()
+        # 用 `normal_geometry()` 而不是 `geometry()`：最大化状态下退出，
+        # 存下来的必须是"还原后的尺寸"，否则下次启动直接是个贴屏巨窗。
+        geo = self.window.normal_geometry()
         self.config.window.w = geo.width()
         self.config.window.h = geo.height()
         self.config.window.x = geo.x()
@@ -2132,7 +2134,7 @@ class BleChatApp(QObject):
             return
         if auto:
             self.window.show_hint(
-                "唤醒后蓝牙栈没恢复，需要手动重置：请按 Ctrl+R（或点“重置蓝牙”）。"
+                "唤醒后蓝牙栈没恢复，需要手动重置：请按 Ctrl+R（托盘菜单里也有）。"
             )
             return
         opened = open_bluetooth_settings()
